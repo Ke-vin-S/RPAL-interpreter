@@ -2,15 +2,14 @@ name: Interpreter Test
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'test/interpreter/**'
       - '.github/workflows/test-interpreter.yml'
   pull_request:
     branches:
       - main
-    paths:
-      - 'test/interpreter/**'
-      - '.github/workflows/test-interpreter.yml'
   workflow_dispatch:
 
 jobs:
@@ -18,22 +17,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: 🏗️ Set up Java
+      - name: Set up Java
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🧪 Install Wine (to run rpal.exe)
+      - name: Install Wine (to run rpal.exe)
         run: |
           sudo dpkg --add-architecture i386
           sudo apt update
           sudo apt install -y wine32 unzip
 
-      - name: 📦 Download `rpal.zip` from GitHub release
+      - name: Download `rpal.zip` from GitHub release
         id: download_rpal
         uses: robinraju/release-downloader@v1.9
         with:
@@ -42,7 +41,7 @@ jobs:
           fileName: rpal.zip
           out-file-path: test/interpreter
 
-      - name: 🧐 Verify `rpal.zip` exists
+      - name: Verify `rpal.zip` exists
         run: |
           if [ ! -f test/interpreter/rpal.zip ]; then
             echo "ERROR: rpal.zip not found in test/interpreter/"
@@ -50,12 +49,12 @@ jobs:
             exit 1
           fi
 
-      - name: 📂 Extract `rpal.zip` to temp folder
+      - name: Extract `rpal.zip` to temp folder
         run: |
           mkdir -p test/interpreter/temp_extract
           unzip -o test/interpreter/rpal.zip -d test/interpreter/temp_extract
 
-      - name: 📦 Move inner contents if nested in 'rpal/' folder
+      - name: Move inner contents if nested in 'rpal/' folder
         run: |
           if [ -d test/interpreter/temp_extract/rpal ]; then
             mv test/interpreter/temp_extract/rpal/* test/interpreter/
@@ -63,10 +62,10 @@ jobs:
             mv test/interpreter/temp_extract/* test/interpreter/
           fi
 
-      - name: 📋 List contents after extraction
+      - name: List contents after extraction
         run: ls -la test/interpreter
 
-      - name: ✅ Check rpal.exe exists
+      - name: Check rpal.exe exists
         run: |
           if [ ! -f test/interpreter/rpal.exe ]; then
             echo "ERROR: rpal.exe not found in expected location!"
@@ -74,10 +73,10 @@ jobs:
             exit 1
           fi
 
-      - name: 🧼 Make test script executable
+      - name: Make test script executable
         run: chmod +x test/interpreter/runTests.sh
 
-      - name: 🚀 Run interpreter tests
+      - name: Run interpreter tests
         working-directory: test/interpreter
         run: ./runTests.sh
           

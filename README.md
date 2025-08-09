@@ -1,5 +1,8 @@
 # RPAL Interpreter
 
+![MIT License](https://img.shields.io/badge/license-MIT-green)
+![Java](https://img.shields.io/badge/language-Java-blue)
+
 A Java-based interpreter for the RPAL (Right-reference Programming Algorithmic Language) language. This project provides a full pipeline for parsing, standardizing, compiling, and interpreting RPAL code, supporting both command-line and automated test execution.
 
 ---

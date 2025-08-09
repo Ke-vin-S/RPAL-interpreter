@@ -20,4 +20,4 @@ Thank you for your interest in contributing!
 
 ## Community
 - Be respectful and constructive in all interactions.
-- See the Code of Conduct for more details.
+- See the [Code of Conduct](CODE_OF_CONDUCT.md) for more details.

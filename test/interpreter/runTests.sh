@@ -14,7 +14,7 @@ export WINEPREFIX=~/.wine32
 WINE_EXEC="setarch i386 -R wine"
 RPAL_EXE="./rpal.exe"
 TEST_DIR="$(dirname "$0")/../tests"
-JAVA_SRC="$(dirname "$0")/../../parser/src"
+JAVA_SRC="$(dirname "$0")/../../src"
 JAVA_BIN="$JAVA_SRC/bin"
 JAVA_MAIN_CLASS="Main"
 

@@ -1,0 +1,23 @@
+package io.github.ke_vin_s.rpal.core.scanner;
+
+public enum TokenType {
+    IDENTIFIER, INTEGER, STRING,
+    OPERATOR, DELETE,
+    OPEN_BRACKET, CLOSE_BRACKET,
+    SEMICOLON, COMMA, EOF,
+    // EXPRESSIONS
+    KEYWORD_LET, KEYWORD_FN, KEYWORD_IN, PERIOD, KEYWORD_WHERE,
+    // TUPLE
+    KEYWORD_AUG, CONDITION_SIGN, VERTICAL_BAR,
+    // split them instead of grouping, they get treated differently
+    // BOOLEAN
+    OR, AND, NOT, GREATER_THAN, LESS_THAN, GREATER_THAN_EQUAL, LESS_THAN_EQUAL,
+    EQUAL, NOT_EQUAL,
+    // ARITHMETIC - no minus and negate as two, they will be recognized at parsing
+    PLUS, MINUS, MULTIPLY, DIVIDE, EXPONENT, INFIX_FUNCTION,
+    // RATORS AND RANDS
+    BOOLEAN, NIL, DUMMY,
+    // DEFINITIONS
+    KEYWORD_WITHIN, AND_SIMULTANEOUS_DEFINITION, REC,
+//    ASSIGN,
+}

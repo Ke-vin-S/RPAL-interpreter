@@ -4,6 +4,19 @@
         <artifactId>rpal-interpreter</artifactId>
         <version>0.1.0</version>
     </parent>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <compilerArgs>--enable-preview</compilerArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>rpal-core</artifactId>

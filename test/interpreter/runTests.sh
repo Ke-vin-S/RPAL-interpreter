@@ -14,9 +14,7 @@ export WINEPREFIX=~/.wine32
 WINE_EXEC="setarch i386 -R wine"
 RPAL_EXE="./rpal.exe"
 TEST_DIR="$(dirname "$0")/../tests"
-JAVA_SRC="$(dirname "$0")/../../src"
-JAVA_BIN="$JAVA_SRC/bin"
-JAVA_MAIN_CLASS="Main"
+CLI_JAR="$(dirname "$0")/../../rpal-cli/target/rpal-cli-jar-with-dependencies.jar"
 
 all_passed=true
 
@@ -27,16 +25,23 @@ if [[ ! -f "$RPAL_EXE" ]]; then
   exit 1
 fi
 
-# --- Compile Java parser ---
-echo -e "${BLUE}${BOLD}Compiling Java parser...${NC}"
-mkdir -p "$JAVA_BIN"
-find "$JAVA_SRC" -name "*.java" > java_sources.txt
-if ! javac -d "$JAVA_BIN" @java_sources.txt; then
-  echo -e "${RED}Compilation failed. Exiting.${NC}"
-  rm java_sources.txt
+# --- Compile Java project via Maven ---
+echo -e "${BLUE}${BOLD}Building RPAL project using Maven...${NC}"
+
+pushd "$(dirname "$0")/../.." > /dev/null  # Move to repo root
+if ! mvn clean package -pl rpal-cli -DskipTests; then
+  echo -e "${RED}Maven build failed. Exiting.${NC}"
+  popd > /dev/null
   exit 1
 fi
-rm java_sources.txt
+popd > /dev/null  # Return to previous directory
+
+# --- Verify JAR exists ---
+if [[ ! -f "$CLI_JAR" ]]; then
+  echo -e "${RED}❌ Error: CLI JAR not found at $CLI_JAR${NC}"
+  echo "Make sure Maven built it successfully."
+  exit 1
+fi
 
 echo -e "${BLUE}Running tests from: $TEST_DIR${NC}"
 
@@ -59,7 +64,7 @@ for input in "$TEST_DIR"/*; do
         continue
       fi
 
-      if ! java -cp "$JAVA_BIN" "$JAVA_MAIN_CLASS" "$flag" "$input" > java_output.txt 2>&1; then
+      if ! java --enable-preview -jar "$CLI_JAR" "$input" "$flag" > java_output.txt 2>&1; then
         echo -e "${YELLOW}Java execution failed for $flag on $testname${NC}"
         continue
       fi

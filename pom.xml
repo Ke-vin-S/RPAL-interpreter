@@ -12,7 +12,6 @@
     <modules>
         <module>rpal-core</module>
         <module>rpal-cli</module>
-        <module>rpal-tests</module>
     </modules>
 
     <name>RPAL Interpreter Project</name>

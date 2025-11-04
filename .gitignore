@@ -25,4 +25,5 @@ Thumbs.db
 # Test outputs
 /test/interpreter/temp_extract/
 /test/interpreter/rpal.zip
+/test/interpreter/rpal.exe
 /test/interpreter/cygwin1.dll

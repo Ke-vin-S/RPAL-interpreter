@@ -29,7 +29,7 @@ fi
 echo -e "${BLUE}${BOLD}Building RPAL project using Maven...${NC}"
 
 pushd "$(dirname "$0")/../.." > /dev/null  # Move to repo root
-if ! mvn clean package -pl rpal-cli -DskipTests; then
+if ! mvn clean package -DskipTests; then
   echo -e "${RED}Maven build failed. Exiting.${NC}"
   popd > /dev/null
   exit 1

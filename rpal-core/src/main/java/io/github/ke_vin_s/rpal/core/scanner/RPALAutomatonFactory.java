@@ -2,78 +2,59 @@ package io.github.ke_vin_s.rpal.core.scanner;
 
 import io.github.ke_vin_s.rpal.core.automaton.FiniteAutomaton;
 import io.github.ke_vin_s.rpal.core.automaton.FiniteAutomatonBuilder;
-import static io.github.ke_vin_s.rpal.core.utils.SymbolUtils.*;
 
-import java.util.List;
 import java.util.Set;
 
-public class RPALAutomatonFactory {    public static FiniteAutomaton createRPALAutomaton() {
-    return FiniteAutomatonBuilder.builder()
-            .withStateNames(List.of("q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7",
-                    "q8", "q9", "q10", "q11", "q12", "q13", "q14", "q15", "q16", "q17", "q18",
-                    "q19", "q20", "q21", "q22", "q23", "q24", "q25"))
-            .withInitialState("q0")
-            .withAcceptingStateNames(List.of(
-                    "q1", "q2", "q4", "q5", "q6", "q8", "q9", "q10",
-                    "q11", "q12", "q13", "q14", "q15", "q16", "q17", "q18",
-                    "q19", "q20", "q21", "q22", "q23", "q24", "q25"
-            ))
-            .withLanguage(Set.of('a', 'b', 'c')) // Add all RPAL language symbols
-            // identifier
-            .withTransition("q0", getLetters(), "q1")
-            .withTransition("q1", getLetters(), "q1")
-            .withTransition("q1", getDigits(), "q1")
-            .withTransition("q1", '_', "q1")
-            // digit
-            .withTransition("q0", getDigits(), "q2")
-            .withTransition("q2", getDigits(), "q2")
-            // strings
-            .withTransition("q0", '\'', "q3")
-            .withTransition("q3", getLetters(), "q3")
-            .withTransition("q3", getDigits(), "q3")
-            .withTransition("q3", getOperatorSymbols(), "q3")
-            .withTransition("q3", getStringSymbols(), "q3")
-            .withTransition("q3", '\'', "q4")
-            // spaces ? is /r need to handle
-            .withTransition("q0", ' ', "q5")
-            .withTransition("q0", '\t', "q5")
-            .withTransition("q0", '\n', "q5")
-            .withTransition("q0", '\r', "q5")
-            .withTransition("q5", ' ', "q5")
-            .withTransition("q5", '\t', "q5")
-            .withTransition("q5", '\n', "q5")
-            .withTransition("q5", '\r', "q5")
-            // comments
-            .withTransition("q0", '/', "q6")
-            .withTransition("q6", '/', "q7")
-            .withTransition("q7", getLetters(), "q7")
-            .withTransition("q7", getDigits(), "q7")
-            .withTransition("q7", getOperatorSymbols(), "q7")
-            .withTransition("q7", getCommentSymbols(), "q7")
-            .withTransition("q7", '\n', "q8")
-            .withTransition("q7", '\r', "q8")
-            // operators: two steps
-            .withTransition("q0", '-', "q13")
-            .withTransition("q13", '>', "q14")
-            .withTransition("q0", '>', "q15")
-            .withTransition("q15", '=', "q16")
-            .withTransition("q0", '<', "q17")
-            .withTransition("q17", '=', "q18")
-            .withTransition("q0", '*', "q20")
-            .withTransition("q20", '*', "q21")
-            // operators: one step
-            .withTransition("q0", '.', "q9")
-            .withTransition("q0", ',', "q10")
-            .withTransition("q0", '|', "q11")
-            .withTransition("q0", '&', "q12")
-            .withTransition("q0", '+', "q19")
-            .withTransition("q0", '@', "q22")
-            .withTransition("q0", '(', "q23")
-            .withTransition("q0", ')', "q24")
-            .withTransition("q0", '=', "q25")
-            // semicolon not included because i dont see any use of it in lex
-            // TODO: manage rest of the operation symbols
-            // Add more transitions as needed for RPAL
-            .build();
-}
+public class RPALAutomatonFactory {
+    public static FiniteAutomaton createRPALAutomaton() {
+        return FiniteAutomatonBuilder.builder()
+                .withInitialState("START")
+
+                // --- Identifiers ---
+                .withTransition("START", Character::isLetter, "IN_ID")
+                .withTransition("IN_ID", c -> Character.isLetterOrDigit(c) || c == '_', "IN_ID")
+
+                // --- Integers ---
+                .withTransition("START", Character::isDigit, "IN_INT")
+                .withTransition("IN_INT", Character::isDigit, "IN_INT")
+
+                // --- Strings ---
+                .withTransition("START", '\'', "IN_STR")
+                .withTransition("IN_STR", c -> c != '\'', "IN_STR") // Predicate: anything but '
+                .withTransition("IN_STR", '\'', "END_STR")
+
+                // --- Spaces / Whitespace ---
+                .withTransition("START", Character::isWhitespace, "IN_SPACE")
+                .withTransition("IN_SPACE", Character::isWhitespace, "IN_SPACE")
+
+                // --- Comments ---
+                .withTransition("START", '/', "IN_COMMENT_SLASH")
+                .withTransition("IN_COMMENT_SLASH", '/', "IN_COMMENT_BODY")
+                .withTransition("IN_COMMENT_BODY", c -> c != '\n' && c != '\r', "IN_COMMENT_BODY")
+                .withTransition("IN_COMMENT_BODY", c -> c == '\n' || c == '\r', "END_COMMENT")
+
+                // --- Multi-Step Operators (Priority handling) ---
+                .withTransition("START", '-', "OP_MINUS")
+                .withTransition("OP_MINUS", '>', "OP_ARROW")
+
+                .withTransition("START", '>', "OP_GT")
+                .withTransition("OP_GT", '=', "OP_GE")
+
+                .withTransition("START", '<', "OP_LT")
+                .withTransition("OP_LT", '=', "OP_LE")
+
+                .withTransition("START", '*', "OP_MUL")
+                .withTransition("OP_MUL", '*', "OP_EXP")
+
+                // --- Single-Step Operators ---
+                .withTransition("START", Set.of('.', ',', '|', '&', '+', '@', '(', ')', '=', ';'), "OP_SINGLE")
+
+                // --- Accepting States ---
+                .withAcceptingStates(
+                        "IN_ID", "IN_INT", "END_STR", "IN_SPACE", "IN_COMMENT_SLASH",
+                        "END_COMMENT", "OP_MINUS", "OP_ARROW", "OP_GT", "OP_GE",
+                        "OP_LT", "OP_LE", "OP_MUL", "OP_EXP", "OP_SINGLE"
+                )
+                .build();
+    }
 }

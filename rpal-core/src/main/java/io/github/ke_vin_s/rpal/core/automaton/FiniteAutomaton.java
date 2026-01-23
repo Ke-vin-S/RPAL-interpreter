@@ -5,85 +5,71 @@ import java.util.*;
 public class FiniteAutomaton {
     private final List<State> states;
     private final Set<State> acceptingStates;
-    private final Set<Character> language;
     private final State initialState;
     private State currentState;
 
-    FiniteAutomaton(List<State> states, State initialState,
-                    Set<State> acceptingStates, Set<Character> language) {
-        if (states == null || states.isEmpty()) {
-            throw new IllegalArgumentException("States list cannot be null or empty");
-        }
-        if (initialState == null) {
-            throw new IllegalArgumentException("Initial state cannot be null");
-        }
-        if (acceptingStates == null) {
-            throw new IllegalArgumentException("Accepting states set cannot be null");
-        }
-        if (language == null) {
-            throw new IllegalArgumentException("Language set cannot be null");
-        }
-
-        this.states = new ArrayList<>(states);
+    FiniteAutomaton(List<State> states, State initialState, Set<State> acceptingStates) {
+        this.states = List.copyOf(states);
         this.initialState = initialState;
         this.currentState = initialState;
-        this.acceptingStates = new HashSet<>(acceptingStates);
-        this.language = new HashSet<>(language);
+        this.acceptingStates = Set.copyOf(acceptingStates);
 
-        // initialState and acceptingStates are in states
-        validateStatesConsistency(states, initialState, acceptingStates);
+        validateStatesConsistency();
     }
 
-    private static void validateStatesConsistency(List<State> states, State initialState, Set<State> acceptingStates) {
+    private void validateStatesConsistency() {
         if (!states.contains(initialState)) {
-            throw new IllegalArgumentException("Initial state must be in states list");
+            throw new IllegalArgumentException("Initial state must be in the states list.");
         }
-        for (State state : acceptingStates) {
-            if (!states.contains(state)) {
-                throw new IllegalArgumentException(
-                        "Accepting state " + state.getName() + " is not in states list");
-            }
+        if (!states.containsAll(acceptingStates)) {
+            throw new IllegalArgumentException("All accepting states must be in the states list.");
         }
     }
 
-    public State getState(String stateName) {
-        for (State state : states) {
-            if (state.getName().equals(stateName)) {
-                return state;
-            }
+    /**
+     * Attempts to transition the automaton using the given character.
+     * @return true if the transition was successful, false if no rule matched.
+     */
+    public boolean step(char symbol) {
+        State nextState = currentState.getNextState(symbol);
+        if (nextState != null) {
+            currentState = nextState;
+            return true;
         }
-        return null;
+        return false;
     }
 
+    /**
+     * Standard transition method that throws an exception on failure.
+     * Useful for strict DFA execution.
+     */
     public void transition(char symbol) {
-        if (!language.contains(symbol)) {
-            throw new IllegalArgumentException("Symbol not in language: " + symbol);
+        if (!step(symbol)) {
+            throw new IllegalStateException("No valid transition from state " +
+                    currentState.getName() + " for character: '" + symbol + "'");
         }
-        State nextState = currentState.getTransition(symbol);
-        if (nextState == null) {
-            throw new IllegalStateException("No transition for symbol: " + symbol);
-        }
-        if (!states.contains(nextState)) {
-            throw new IllegalStateException(
-                    "Transition leads to invalid state: " + nextState.getName() +
-                            ". scanner.State is not part of the automaton."
-            );
-        }
-        currentState = nextState;
     }
 
-    public boolean hasTransition(char symbol) {
-        return states.contains(currentState.getTransition(symbol));
+    /**
+     * Checks if a transition is possible without actually moving the automaton.
+     */
+    public boolean canTransition(char symbol) {
+        return currentState.getNextState(symbol) != null;
     }
 
     public void reset() {
-        currentState = initialState;
+        this.currentState = initialState;
     }
 
-    public State getCurrentState(){
+    public State getCurrentState() {
         return this.currentState;
     }
-    public boolean isAcceptingState(){
+
+    public boolean isAccepting() {
         return acceptingStates.contains(currentState);
+    }
+
+    public String getCurrentStateName() {
+        return currentState.getName();
     }
 }

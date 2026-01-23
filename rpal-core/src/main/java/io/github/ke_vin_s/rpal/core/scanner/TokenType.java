@@ -19,5 +19,5 @@ public enum TokenType {
     BOOLEAN, NIL, DUMMY,
     // DEFINITIONS
     KEYWORD_WITHIN, AND_SIMULTANEOUS_DEFINITION, REC,
-//    ASSIGN,
+    // ASSIGN: Not identified in the scanner
 }

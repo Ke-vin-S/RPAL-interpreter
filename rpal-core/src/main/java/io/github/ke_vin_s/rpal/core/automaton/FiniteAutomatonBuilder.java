@@ -1,6 +1,7 @@
 package io.github.ke_vin_s.rpal.core.automaton;
 
 import java.util.*;
+import java.util.function.Predicate;
 
 public final class FiniteAutomatonBuilder {
     private final Map<String, State> states = new HashMap<>();
@@ -8,49 +9,42 @@ public final class FiniteAutomatonBuilder {
     private final Set<State> acceptingStates = new HashSet<>();
     private final Set<Character> language = new HashSet<>();
 
-    private FiniteAutomatonBuilder() {}
+    private FiniteAutomatonBuilder() {
+    }
 
     public static FiniteAutomatonBuilder builder() {
         return new FiniteAutomatonBuilder();
     }
 
-    public FiniteAutomatonBuilder withState(String name) {
-        putStateByName(name);
+    public FiniteAutomatonBuilder withTransition(String fromName, Predicate<Character> condition, String toName) {
+        State source = getOrCreateState(fromName);
+        State target = getOrCreateState(toName);
+        source.addTransition(condition, target);
         return this;
     }
 
-    public FiniteAutomatonBuilder withStateNames(List<String> stateNamesList) {
-        for (String name : stateNamesList) {
-            putStateByName(name);
-        }
-        return this;
+    public FiniteAutomatonBuilder withTransition(String fromName, Collection<Character> symbols, String toName) {
+        language.addAll(symbols);
+        // We use a Set for O(1) lookup inside the predicate
+        final Set<Character> symbolSet = new HashSet<>(symbols);
+        return withTransition(fromName, symbolSet::contains, toName);
     }
 
-    private void putStateByName(String name) {
-        if (!states.containsKey(name)) {
-            states.put(name, new State(name));
-        }
+    public FiniteAutomatonBuilder withTransition(String fromName, char symbol, String toName) {
+        language.add(symbol);
+        return withTransition(fromName, c -> c == symbol, toName);
     }
 
-    public FiniteAutomatonBuilder withStates(List<State> statesList) {
-        for (State state : statesList) {
-            states.put(state.getName(), state);
+    public FiniteAutomatonBuilder withAcceptingStates(String... stateNames) {
+        for (String name : stateNames) {
+            State s = getOrCreateState(name);
+            acceptingStates.add(s);
         }
         return this;
     }
 
     public FiniteAutomatonBuilder withInitialState(String stateName) {
         this.initialState = states.computeIfAbsent(stateName, State::new);
-        return this;
-    }
-
-    public FiniteAutomatonBuilder withLanguage(Set<Character> language) {
-        this.language.addAll(language);
-        return this;
-    }
-
-    public FiniteAutomatonBuilder withAcceptingState(String stateName) {
-        addAcceptingStateByName(stateName);
         return this;
     }
 
@@ -62,42 +56,17 @@ public final class FiniteAutomatonBuilder {
         this.acceptingStates.add(state);
     }
 
-    public FiniteAutomatonBuilder withAcceptingStateNames(List<String> stateNames) {
-        for (String stateName : stateNames) {
-            addAcceptingStateByName(stateName);
-        }
-        return this;
-    }
-
-    public FiniteAutomatonBuilder withTransition(String fromState, char symbol, String toState) {
-        State source = states.computeIfAbsent(fromState, State::new);
-        State target = states.computeIfAbsent(toState, State::new);
-        source.setTransition(symbol, target);
-        language.add(symbol);
-        return this;
-    }
-
-    public FiniteAutomatonBuilder withTransition(String fromState, List<Character> symbols, String toState) {
-        State source = states.computeIfAbsent(fromState, State::new);
-        State target = states.computeIfAbsent(toState, State::new);
-        source.setTransition(symbols, target);
-        language.addAll(symbols);
-        return this;
+    private State getOrCreateState(String name) {
+        return states.computeIfAbsent(name, State::new);
     }
 
     public FiniteAutomaton build() {
-        if (initialState == null) {
-            throw new IllegalStateException("Initial state must be specified");
-        }
-        if (states.isEmpty()) {
-            throw new IllegalStateException("At least one state must be defined");
-        }
+        if (initialState == null) throw new IllegalStateException("Initial state required");
 
         return new FiniteAutomaton(
-                new ArrayList<>(states.values()),
+                List.copyOf(states.values()),
                 initialState,
-                acceptingStates,
-                language
+                Set.copyOf(acceptingStates)
         );
     }
 }

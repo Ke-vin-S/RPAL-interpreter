@@ -2,7 +2,6 @@ package io.github.ke_vin_s.rpal.core.scanner;
 
 import io.github.ke_vin_s.rpal.core.automaton.FiniteAutomaton;
 import io.github.ke_vin_s.rpal.core.automaton.FiniteAutomatonBuilder;
-import static io.github.ke_vin_s.rpal.core.utils.SymbolUtils.*;
 
 import java.util.Set;
 

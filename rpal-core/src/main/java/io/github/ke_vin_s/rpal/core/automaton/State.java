@@ -1,30 +1,34 @@
 package io.github.ke_vin_s.rpal.core.automaton;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 public class State {
     private final String name;
-    private final HashMap<Character, State> transitions;
+
+    private record Transition(Predicate<Character> condition, State target) {}
+
+    private final List<Transition> transitions = new ArrayList<>();
 
     public State(String name) {
         this.name = name;
-        this.transitions = new HashMap<>();
     }
-    public String getName() {
-        return name;
-    }
-    public State getTransition(char c) {
-        return transitions.get(c);
-    }
-    public void setTransition(char c, State s) {
-        transitions.put(c, s);
-    }
-    public void setTransition(List<Character> inputs, State s) {
-        for (char c : inputs) {
-            setTransition(c, s);
+
+    public State getNextState(char c) {
+        for (Transition transition : transitions) {
+            if (transition.condition.test(c)) {
+                return transition.target;
+            }
         }
+        return null;
     }
+
+    public void addTransition(Predicate<Character> condition, State target) {
+        this.transitions.add(new Transition(condition, target));
+    }
+
+    public String getName() { return name; }
 
     @Override
     public String toString() {

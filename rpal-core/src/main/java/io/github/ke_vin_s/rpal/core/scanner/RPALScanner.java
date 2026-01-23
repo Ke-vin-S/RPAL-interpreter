@@ -1,25 +1,20 @@
 package io.github.ke_vin_s.rpal.core.scanner;
 
 import io.github.ke_vin_s.rpal.core.automaton.FiniteAutomaton;
-import io.github.ke_vin_s.rpal.core.automaton.State;
 import io.github.ke_vin_s.rpal.core.utils.StringUtils;
 
 import java.util.*;
 
 public class RPALScanner extends BaseScanner {
     protected final FiniteAutomaton automaton;
-    protected final Map<State, TokenType> acceptingStatesToTokenTypes;
+    protected final Map<String, TokenType> stateNameToTokenType;
+    protected final Screener screener;
 
-    public RPALScanner() {
+    public RPALScanner(String input) {
+        super(input);
         this.automaton = RPALAutomatonFactory.createRPALAutomaton();
-        this.acceptingStatesToTokenTypes = createTokenMapping();
-    }
-
-    @Override
-    public void setInput(String input) {
-        this.input = input;
-        reset();
-        automaton.reset();
+        this.stateNameToTokenType = createTokenMapping();
+        this.screener = new RPALScreener();
     }
 
     @Override
@@ -28,92 +23,70 @@ public class RPALScanner extends BaseScanner {
     }
 
     @Override
+    public List<Token> tokenize() {
+        List<Token> rawTokens = new ArrayList<>();
+        while (hasNext()) {
+            rawTokens.add(nextToken());
+        }
+        // Pipe the raw tokens through the screener
+        return screener.screen(rawTokens);
+    }
+
+    @Override
     public Token nextToken() {
-        int startPosition = currentPosition;
+        automaton.reset();
         int startLine = lineNumber;
         int startColumn = columnNumber;
         StringBuilder lexeme = new StringBuilder();
 
-        automaton.reset();
-
-        while (currentPosition < input.length()) {
+        while (hasNext()) {
             char currentChar = input.charAt(currentPosition);
 
-            try {
-                // lookahead for next state belonging to same token class
-                // if not output the token
-                if (!automaton.hasTransition(currentChar)) {
-                    break;
-                }
-
-                // Process the character
-                automaton.transition(currentChar);
+            if (automaton.step(currentChar)) {
                 lexeme.append(currentChar);
-                updatePosition(currentChar);
-                currentPosition++;
-            } catch (IllegalArgumentException | IllegalStateException e) {
+                advance(); // Updates line/col/pos in BaseScanner
+            } else {
                 break;
             }
         }
 
-        // output the valid token
-        if (automaton.isAcceptingState()) {
-            String tokenText = lexeme.toString();
-            TokenType tokenType = acceptingStatesToTokenTypes.get(automaton.getCurrentState());
+        if (automaton.isAccepting()) {
+            String stateName = automaton.getCurrentStateName();
+            String text = lexeme.toString();
 
-            if (tokenType == TokenType.STRING) {
-                // Strip quotes and unescape characters
-                tokenText = StringUtils.stripQuotes(tokenText);
-                tokenText = StringUtils.unescape(tokenText);
+            // Map the DFA state to the preliminary TokenType
+            TokenType type = stateNameToTokenType.getOrDefault(stateName, TokenType.IDENTIFIER);
+
+            // Basic post-processing for raw strings
+            if (stateName.equals("END_STR")) {
+                text = StringUtils.stripQuotes(text);
+                text = StringUtils.unescape(text);
+                type = TokenType.STRING;
             }
 
-
-            return new Token(tokenType, tokenText, startLine, startColumn);
+            return new Token(type, text, startLine, startColumn);
         }
 
-        String invalidText = input.substring(startPosition, Math.min(startPosition + 10, input.length()));
-        throw new ScannerException("Invalid token at line " + startLine + ", column " + startColumn +
-                ": '" + invalidText + "'");
+        throw new ScannerException("Lexical error at line " + startLine + ", col " + startColumn);
     }
 
-    @Override
-    public List<Token> tokenize() {
-        List<Token> tokens = new ArrayList<>();
-        Token token;
-        while (hasNext()) {
-            token = nextToken();
-            tokens.add(token);
-        }
-        return tokens;
-    }
-
-    private HashMap<State, TokenType> createTokenMapping() {
-        HashMap<State, TokenType> acceptingStatesToTokenTypes = new HashMap<>();
-        acceptingStatesToTokenTypes.put(automaton.getState("q1"), TokenType.IDENTIFIER);
-        acceptingStatesToTokenTypes.put(automaton.getState("q2"), TokenType.INTEGER);
-        acceptingStatesToTokenTypes.put(automaton.getState("q4"), TokenType.STRING);
-        acceptingStatesToTokenTypes.put(automaton.getState("q5"), TokenType.DELETE);
-        acceptingStatesToTokenTypes.put(automaton.getState("q6"), TokenType.DIVIDE);
-        // //+ - recognized as comments
-        acceptingStatesToTokenTypes.put(automaton.getState("q8"), TokenType.DELETE);
-        acceptingStatesToTokenTypes.put(automaton.getState("q9"), TokenType.PERIOD);
-        acceptingStatesToTokenTypes.put(automaton.getState("q10"), TokenType.COMMA);
-        acceptingStatesToTokenTypes.put(automaton.getState("q11"), TokenType.VERTICAL_BAR);
-        acceptingStatesToTokenTypes.put(automaton.getState("q12"), TokenType.AND);
-        acceptingStatesToTokenTypes.put(automaton.getState("q13"), TokenType.MINUS);
-        acceptingStatesToTokenTypes.put(automaton.getState("q14"), TokenType.CONDITION_SIGN);
-        acceptingStatesToTokenTypes.put(automaton.getState("q15"), TokenType.GREATER_THAN);
-        acceptingStatesToTokenTypes.put(automaton.getState("q16"), TokenType.GREATER_THAN_EQUAL);
-        acceptingStatesToTokenTypes.put(automaton.getState("q17"), TokenType.LESS_THAN);
-        acceptingStatesToTokenTypes.put(automaton.getState("q18"), TokenType.LESS_THAN_EQUAL);
-        acceptingStatesToTokenTypes.put(automaton.getState("q19"), TokenType.PLUS);
-        acceptingStatesToTokenTypes.put(automaton.getState("q20"), TokenType.MULTIPLY);
-        acceptingStatesToTokenTypes.put(automaton.getState("q21"), TokenType.EXPONENT);
-        acceptingStatesToTokenTypes.put(automaton.getState("q22"), TokenType.INFIX_FUNCTION);
-        acceptingStatesToTokenTypes.put(automaton.getState("q23"), TokenType.OPEN_BRACKET);
-        acceptingStatesToTokenTypes.put(automaton.getState("q24"), TokenType.CLOSE_BRACKET);
-        acceptingStatesToTokenTypes.put(automaton.getState("q25"), TokenType.EQUAL);
-        return acceptingStatesToTokenTypes;
+    private Map<String, TokenType> createTokenMapping() {
+        Map<String, TokenType> mapping = new HashMap<>();
+        mapping.put("IN_ID", TokenType.IDENTIFIER);
+        mapping.put("IN_INT", TokenType.INTEGER);
+        mapping.put("END_STR", TokenType.STRING);
+        mapping.put("IN_SPACE", TokenType.DELETE);    // Screener will remove
+        mapping.put("END_COMMENT", TokenType.DELETE); // Screener will remove
+        mapping.put("OP_MINUS", TokenType.MINUS);
+        mapping.put("OP_ARROW", TokenType.CONDITION_SIGN);
+        mapping.put("OP_GT", TokenType.GREATER_THAN);
+        mapping.put("OP_GE", TokenType.GREATER_THAN_EQUAL);
+        mapping.put("OP_LT", TokenType.LESS_THAN);
+        mapping.put("OP_LE", TokenType.LESS_THAN_EQUAL);
+        mapping.put("OP_MUL", TokenType.MULTIPLY);
+        mapping.put("OP_EXP", TokenType.EXPONENT);
+        mapping.put("OP_SINGLE", TokenType.OPERATOR);
+        return mapping;
     }
 }
 

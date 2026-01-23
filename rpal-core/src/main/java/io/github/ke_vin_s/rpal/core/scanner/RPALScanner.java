@@ -6,7 +6,7 @@ import io.github.ke_vin_s.rpal.core.utils.StringUtils;
 
 import java.util.*;
 
-public class RPALScanner extends Scanner {
+public class RPALScanner extends BaseScanner {
     protected final FiniteAutomaton automaton;
     protected final Map<State, TokenType> acceptingStatesToTokenTypes;
 

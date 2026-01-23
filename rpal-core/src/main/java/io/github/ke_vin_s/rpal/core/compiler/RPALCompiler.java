@@ -33,7 +33,7 @@ public class RPALCompiler {
     }
 
     private void tokenize() {
-        Scanner scanner = new RPALScanner();
+        RPALScanner scanner = new RPALScanner();
         scanner.setInput(source);
         tokens = new RPALScreener().screen(scanner.tokenize());
     }
